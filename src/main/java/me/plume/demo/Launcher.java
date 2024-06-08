@@ -1,4 +1,4 @@
-package me.plume.fx;
+package me.plume.demo;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
