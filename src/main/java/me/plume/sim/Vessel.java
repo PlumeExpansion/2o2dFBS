@@ -6,7 +6,7 @@ import java.util.Set;
 import javafx.geometry.Point2D;
 
 public abstract class Vessel {
-	private Set<Force> forces = new HashSet<>();
+	protected Set<Force> forces = new HashSet<>();
 	private Point2D r = Point2D.ZERO, v = Point2D.ZERO, a = Point2D.ZERO;
 	private double alpha, omega, theta;
 	public Point2D getPos() { return r; }
@@ -15,14 +15,21 @@ public abstract class Vessel {
 	public double getAlpha() { return alpha; }
 	public double getOmega() { return omega; }
 	public double getTheta() { return theta; }
+	public Vessel(Point2D pos, Point2D vel) {
+		this.r = pos;
+		this.v = vel;
+	}
 	public void syncKinematics(double dt) {
 		double torque = 0;
 		Point2D force = Point2D.ZERO;
 		for (Force f : forces) {
 			Point2D r = f.getPos().subtract(calcCM());
 			torque += r.crossProduct(f.getForce()).getZ();
-			r = r.normalize();
-			force = force.add(r.multiply(f.getForce().dotProduct(r)));
+			if (r.magnitude() == 0) force = force.add(f.getForce());
+			else {
+				r = r.normalize();
+				force = force.add(r.multiply(f.getForce().dotProduct(r)));
+			}
 		}
 		alpha = torque / calcMoment();
 		theta += alpha*dt*dt/2 + omega*dt;
