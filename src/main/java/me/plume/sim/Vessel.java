@@ -31,6 +31,7 @@ public abstract class Vessel {
 				force = force.add(r.multiply(f.getForce().dotProduct(r)));
 			}
 		}
+		forces.clear();
 		alpha = torque / calcMoment();
 		theta += alpha*dt*dt/2 + omega*dt;
 		omega += alpha*dt;

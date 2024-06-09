@@ -16,7 +16,8 @@ import me.plume.sim.Vessel;
 
 public class Launcher extends Application {
 	public void start(Stage window) {
-		Simulation sim = new Simulation(0.001);
+		window.setTitle("Projectile Motion");
+		Simulation sim = new Simulation(0.01);
 		sim.addInit(vs -> {
 			vs.add(new Vessel(new Point2D(0, 15), new Point2D(5, 0)) {
 				public double calcMoment() {
@@ -29,7 +30,7 @@ public class Launcher extends Application {
 					return Point2D.ZERO;
 				}
 				public void update(double time, Set<Vessel> toAdd, Set<Vessel> toClear) {
-					if (forces.isEmpty()) forces.add(new Force(Point2D.ZERO, new Point2D(0, -9.8*10)));
+					forces.add(new Force(Point2D.ZERO, new Point2D(0, -9.8*10)));
 					if (getPos().getY()<=0) {
 						System.out.println(sim.getTime());
 						toClear.add(this);
@@ -39,7 +40,7 @@ public class Launcher extends Application {
 					return new Marker(getPos(), getTheta(), this) {
 						public void render(GraphicsContext c, Point2D o, double s) {
 							c.setFill(Color.RED);
-							c.fillOval((getPos().getX()+o.getX()-2)*s, (-getPos().getY()-o.getY()-2)*s, 2*s, 2*s);
+							c.fillOval((getPos().getX()+o.getX()-2)*s, (-getPos().getY()-o.getY()-2)*s, 4*s, 4*s);
 						}
 					};
 				}
