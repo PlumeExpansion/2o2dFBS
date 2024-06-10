@@ -32,6 +32,7 @@ public class GridPortal {
 	private Scene scene;
 	private Canvas canvas;
 	private GraphicsContext c;
+	public GraphicsContext getGraphicsContext() { return c; }
 	private Set<Marker> markers;
 	private Point2D camOffset = Point2D.ZERO;
 	private double defaultScale, scale;
@@ -184,7 +185,7 @@ public class GridPortal {
 		});
 	}
 	public Simulation getSim() { return sim; }
-	private void track(Marker marker) {
+	public void track(Marker marker) {
 		if (marker != null) {
 			if (track == null) center();
 			track = marker;
@@ -196,7 +197,7 @@ public class GridPortal {
 			trackOffset = Point2D.ZERO;
 		}
 	}
-	private void center() {
+	public void center() {
 		camOffset = new Point2D(scene.getWidth()/2/scale, -scene.getHeight()/2/scale);
 		resetDrag();
 	}
@@ -210,7 +211,7 @@ public class GridPortal {
 		Grid.render(scene, c, camOffset.add(trackOffset), scale);
 		markers.forEach(m -> m.render(c, camOffset.add(trackOffset), scale));
 	}
-	private double round(double r, int n) {
+	public static double round(double r, int n) {
 		return Math.round(r*Math.pow(10, n))/Math.pow(10, n);
 	}
 }

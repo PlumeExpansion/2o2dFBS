@@ -6,14 +6,19 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 public class Grid {
-	static final double maxSep = 400;
-	static final int step = 5;
+	static final double maxSep = 200;
+	static final int step = 2;
 	static final double minWidth = 0.1, maxWidth = 1;
-	static final double maxOpacity = .5;
-	static final String hex = "#b0e1ff";
-	static final Color fullOpac = Color.web(hex, maxOpacity);
+	static final double maxOpacity = 0.5;
+	static final double axisOpacity = 1;
+	static final double textOpacity = 1;
+	static final String hex = "#abe4ff";
+	static final Color maxOpac = Color.web(hex, maxOpacity);
+	static final Color textOpac = Color.web(hex, textOpacity);
+	static final Color axisOpac = Color.web(hex, axisOpacity);
+	static final Point2D textOffset = new Point2D(2, -2);
 	public static void render(Scene scene, GraphicsContext c, Point2D o, double s) {
-		c.setStroke(Color.web(hex, maxOpacity));
+		c.setStroke(axisOpac);
 		c.setLineWidth(maxWidth);
 		vLine(scene, c, o.getX()*s);
 		hLine(scene, c, -o.getY()*s);
@@ -37,8 +42,10 @@ public class Grid {
 			}
 			x+=sep/step;
 			c.setLineWidth(maxWidth);
-			c.setStroke(fullOpac);
+			c.setStroke(maxOpac);
 			vLine(scene, c, x);
+			c.setStroke(textOpac);
+			c.strokeText(Double.toString(GridPortal.round(x/s-o.getX(), 1)), x+textOffset.getX(), scene.getHeight()+textOffset.getY());
 		}
 		while (y <= scene.getHeight()) {
 			for (int i = 0; i < step-1; i++) {
@@ -49,8 +56,10 @@ public class Grid {
 			}
 			y+=sep/step;
 			c.setLineWidth(maxWidth);
-			c.setStroke(fullOpac);
+			c.setStroke(maxOpac);
 			hLine(scene, c, y);
+			c.setStroke(textOpac);
+			c.strokeText(Double.toString(GridPortal.round(-y/s-o.getY(), 1)), textOffset.getX(), y+textOffset.getY());
 		}
 	}
 	static void vLine(Scene scene, GraphicsContext c, double x) {

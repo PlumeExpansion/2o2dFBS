@@ -33,11 +33,11 @@ public class Launcher extends Application {
 				public void onStep(double time, Set<Vessel> toAdd, Set<Vessel> toClear) {
 					if (getPos().getY()<=0) {
 						System.out.println("time to impact: " + sim.getTime());
-						toClear.add(this);
 					}
 				}
 				public void update(double time, Set<Force> forces) {
 					forces.add(new Force(Point2D.ZERO, new Point2D(0, -9.8*10)));
+					if (getPos().getY()<=0) forces.add(new Force(Point2D.ZERO, new Point2D(0, 9.8*10)));
 				}
 				public Marker genMarker() {
 					return new Marker(getPos(), getTheta(), this) {
@@ -49,7 +49,8 @@ public class Launcher extends Application {
 				}
 			});
 		});
-		GridPortal portal = new GridPortal(window, new Scene(new Pane(), 1200, 800), sim, 60, new Point2D(1200/2/2, -800/2/2), 2);
+		GridPortal portal = new GridPortal(window, new Scene(new Pane(), 1200, 800), sim, 60, Point2D.ZERO, 5);
+		portal.center();
 		portal.getSim().start();
 		portal.syncSimToScene();
 		window.show();
