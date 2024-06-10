@@ -17,10 +17,15 @@ import me.plume.sim.Marker;
 import me.plume.sim.Simulation;
 
 public class GridPortal {
-	private static final Color BG_COLOR = Color.BLACK;
-	private static final double STAT_DELAY = 1.0 / 5;
-	private static final double SCALE_FACTOR = 1.1;
-	private static final double TRACK_SCENE_DIST = 50;
+	private Color bgColor = Color.BLACK;
+	private double statDelay = 1.0 /5;
+	private double scaleFactor = 1.1;
+	private double trackSceneDist = 50;
+	private String title = "Grid Title";
+	public void setBackgroundColor(Color color) { this.bgColor = color; }
+	public void setStatFreq(double statFreq) { statDelay = 1.0 / statFreq; }
+	public void setTrackSceneDist(double trackSceneDist) { this.trackSceneDist = trackSceneDist; }
+	public void setTitle(String title) { this.title = title; }
 	private Simulation sim;
 	private double delay;
 	private Stage window;
@@ -30,12 +35,11 @@ public class GridPortal {
 	private Set<Marker> markers;
 	private Point2D camOffset = Point2D.ZERO;
 	private double defaultScale, scale;
-	private String title;
 	public GridPortal(Stage window, Scene scene, Simulation sim, double fps, Point2D offset, double scale) {
 		this.window = window;
 		this.scene = scene;
 		this.sim = sim;
-		title = window.getTitle();
+		if (window.getTitle() != null) title = window.getTitle();
 		delay = 1.0/fps;
 		this.camOffset = offset;
 		this.scale = defaultScale = scale;
@@ -50,41 +54,52 @@ public class GridPortal {
 		window.setScene(scene);
 		window.setOnCloseRequest(e -> sim.pause());
 	}
-	private long start, pause, frameN, statCount, statN, buffer, now, last;
+	private long start, pause, frameN, elapsedFrameN, statCount, statN, elapsedStatN, buffer, now, last;
 	private double fpsSum, fpsAvg, bufferSum, bufferAvg;
 	private void initSim() {
 		sim.addInit(vs -> { start = System.currentTimeMillis(); frameN = statN = 0; });
 		sim.addOnPause(vs -> pause = System.currentTimeMillis());
-		sim.addOnResume(vs -> start += System.currentTimeMillis()-pause);
-		sim.addPostTick(vs -> {
-			if (sim.isPaused()) return;
-			if (sim.getTime()/delay < frameN) return;
-			frameN++;
-			buffer = (long) (sim.getTime()*1000-(System.currentTimeMillis()-start));
-			if (buffer > 0) try { Thread.sleep((long) (sim.getTime()*1000-(System.currentTimeMillis()-start))); } catch (Exception e) { e.printStackTrace(); }
-			now = System.currentTimeMillis();
-			fpsSum += 1000.0/(now-last);
-			last = now;
-			bufferSum += buffer;
-			statCount++;
-			if (sim.getTime()/STAT_DELAY >= statN) {
-				fpsAvg = fpsSum / statCount;
-				bufferAvg = bufferSum / statCount;
-				fpsSum = bufferSum = statCount = 0;
-				statN++;
-			}
-			markers = sim.getMarkers();
-			Platform.runLater(() -> {
-				window.setTitle("[%s] - {fps: %s} - {buffer: %s ms} - {%s s behind}".formatted(
-					title, round(fpsAvg, 1), round(bufferAvg, 1), bufferAvg>0? 0 : round(-bufferAvg/1000, 1)
-				));
-				if (track != null) {
-					Optional<Marker> marker = markers.stream().filter(m -> m.getVessel() == track.getVessel()).findFirst();
-					if (marker.isPresent()) track(marker.get());
-					else track(null);
+		sim.addOnResume(vs -> {
+			start += System.currentTimeMillis()-pause;
+		});
+		sim.addOnTick(vs -> {
+			if (!sim.isPaused()) {
+				elapsedFrameN = (long) (sim.getTime()/delay);
+				if (elapsedFrameN < frameN) return;
+				frameN = elapsedFrameN + 1;
+				buffer = (long) (sim.getTime()*1000-(System.currentTimeMillis()-start));
+				if (buffer > 0) try { Thread.sleep((long) (sim.getTime()*1000-(System.currentTimeMillis()-start))); } catch (Exception e) { e.printStackTrace(); }
+				now = System.currentTimeMillis();
+				fpsSum += 1000.0/(now-last);
+				last = now;
+				bufferSum += buffer;
+				statCount++;
+				elapsedStatN = (long) ((System.currentTimeMillis()-start)/1000.0/statDelay);
+				if (elapsedStatN >= statN) {
+					statN = elapsedStatN + 1;
+					fpsAvg = fpsSum / statCount;
+					bufferAvg = bufferSum / statCount;
+					fpsSum = bufferSum = statCount = 0;
 				}
-				render();
-			});
+			} else pause += sim.getDt()*1000;
+			syncSimToScene();
+		});
+	}
+	public void syncSimToScene() {
+		markers = sim.getMarkers();
+		Platform.runLater(() -> {
+			if (sim.isPaused()) window.setTitle("[%s] - {steps: %s} - {time: %s s} - {dt: %s ms}".formatted(
+					title, sim.getStepCount(), round(sim.getTime(), 1), round(sim.getDt()*1000, 1)
+					));
+			else window.setTitle("[%s] - {steps: %s} - {fps: %s} - {buffer: %s ms} - {%s s behind}".formatted(
+				title, sim.getStepCount(), round(fpsAvg, 1), round(Math.max(0, bufferAvg), 1), bufferAvg>0? 0 : round(-bufferAvg/1000, 1)
+					));
+			if (track != null) {
+				Optional<Marker> marker = markers.stream().filter(m -> m.getVessel() == track.getVessel()).findFirst();
+				if (marker.isPresent()) track(marker.get());
+				else track(null);
+			}
+			render();
 		});
 	}
 	private Point2D trackOffset = Point2D.ZERO;
@@ -111,7 +126,7 @@ public class GridPortal {
 				dragStartSceneCoord = new Point2D(e.getSceneX(), e.getSceneY());
 			} else if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() > 1) {
 				Optional<Marker> marker = markers.stream().filter(m -> m.getPos().add(camOffset).add(trackOffset)
-						.multiply(scale).distance(e.getSceneX(), -e.getSceneY()) <= TRACK_SCENE_DIST)
+						.multiply(scale).distance(e.getSceneX(), -e.getSceneY()) <= trackSceneDist)
 				.sorted().findFirst();
 				if (marker.isPresent()) track(marker.get());
 				else track(null);
@@ -138,8 +153,8 @@ public class GridPortal {
 			if (scrollHandler != null) scrollHandler.handle(e);
 			if (e.getDeltaY() != 0) {
 				scrollStartScale = scale;
-				if (e.getDeltaY() > 0) scale *= SCALE_FACTOR;
-				else scale /= SCALE_FACTOR;
+				if (e.getDeltaY() > 0) scale *= scaleFactor;
+				else scale /= scaleFactor;
 				inverseScaleDifference = 1/scrollStartScale - 1/scale;
 				if (mouseCenteredScale) 
 					camOffset = camOffset.add(
@@ -157,12 +172,15 @@ public class GridPortal {
 		scene.setOnKeyPressed(e -> {
 			if (keyPressHandler != null) keyPressHandler.handle(e);
 			if (e.getCode() == KeyCode.M) mouseCenteredScale = !mouseCenteredScale;
-			if (e.getCode() == KeyCode.DECIMAL) {
+			else if (e.getCode() == KeyCode.DECIMAL) {
 				scale = defaultScale;
 				center();
 				render();
-			}
-			if (e.getCode() == KeyCode.ESCAPE && track != null) track(null);
+			} else if (e.getCode() == KeyCode.ESCAPE && track != null) track(null);
+			else if (e.getCode() == KeyCode.SPACE) {
+				if (sim.isPaused()) sim.resume();
+				else sim.pause();
+			} else if (e.getCode() == KeyCode.PERIOD) sim.step();
 		});
 	}
 	public Simulation getSim() { return sim; }
@@ -187,7 +205,7 @@ public class GridPortal {
 		dragStartSceneCoord = null;
 	}
 	private void render() {
-		c.setFill(BG_COLOR);
+		c.setFill(bgColor);
 		c.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 		Grid.render(scene, c, camOffset.add(trackOffset), scale);
 		markers.forEach(m -> m.render(c, camOffset.add(trackOffset), scale));

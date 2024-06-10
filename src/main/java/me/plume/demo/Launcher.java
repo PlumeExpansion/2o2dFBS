@@ -18,6 +18,7 @@ public class Launcher extends Application {
 	public void start(Stage window) {
 		window.setTitle("Projectile Motion");
 		Simulation sim = new Simulation(0.01);
+		sim.setMaxTravel(1);
 		sim.addInit(vs -> {
 			vs.add(new Vessel(new Point2D(0, 15), new Point2D(5, 0)) {
 				public double calcMoment() {
@@ -29,12 +30,14 @@ public class Launcher extends Application {
 				public Point2D calcCM() {
 					return Point2D.ZERO;
 				}
-				public void update(double time, Set<Vessel> toAdd, Set<Vessel> toClear) {
-					forces.add(new Force(Point2D.ZERO, new Point2D(0, -9.8*10)));
+				public void onStep(double time, Set<Vessel> toAdd, Set<Vessel> toClear) {
 					if (getPos().getY()<=0) {
-						System.out.println(sim.getTime());
+						System.out.println("time to impact: " + sim.getTime());
 						toClear.add(this);
 					}
+				}
+				public void update(double time, Set<Force> forces) {
+					forces.add(new Force(Point2D.ZERO, new Point2D(0, -9.8*10)));
 				}
 				public Marker genMarker() {
 					return new Marker(getPos(), getTheta(), this) {
@@ -46,8 +49,9 @@ public class Launcher extends Application {
 				}
 			});
 		});
-		GridPortal portal = new GridPortal(window, new Scene(new Pane(), 1200, 800), sim, 60, new Point2D(1200/2/5, -800/2/5), 5);
+		GridPortal portal = new GridPortal(window, new Scene(new Pane(), 1200, 800), sim, 60, new Point2D(1200/2/2, -800/2/2), 2);
 		portal.getSim().start();
+		portal.syncSimToScene();
 		window.show();
 	}
 	public static void main(String[] args) {
